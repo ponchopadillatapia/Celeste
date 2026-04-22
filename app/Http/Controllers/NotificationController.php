@@ -89,7 +89,11 @@ class NotificationController extends Controller
         $notification = Notification::create($request->only('user_id', 'type', 'title', 'body', 'data'));
 
         // Emitir por WebSocket en tiempo real
-        broadcast(new NewNotification($notification))->toOthers();
+        try {
+            broadcast(new NewNotification($notification))->toOthers();
+        } catch (\Exception $e) {
+            // WebSocket no disponible
+        }
 
         return response()->json($notification, 201);
     }

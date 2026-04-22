@@ -34,39 +34,30 @@ class AuthController extends Controller
             'email_verification_code' => $code,
         ]);
 
-        // En desarrollo: verificar automáticamente. En producción: enviar correo.
-        $autoVerify = app()->environment('local');
+        // Intentar enviar correo de verificación
+        $mailSent = $this->sendMail(
+            $user->email,
+            'Código de verificación - Remedial',
+            $user->name,
+            'Tu código de verificación es:',
+            $code
+        );
 
-        if (!$autoVerify) {
-            try {
-                Mail::raw("Tu código de verificación es: {$code}", function ($message) use ($user) {
-                    $message->to($user->email)
-                            ->subject('Código de verificación de correo');
-                });
-            } catch (\Exception $e) {
-                $autoVerify = true;
-            }
-        }
-
-        if ($autoVerify) {
+        if (!$mailSent) {
+            // Si no se pudo enviar, verificar automáticamente
             $user->update([
                 'email_verified_at' => now(),
                 'email_verification_code' => null,
             ]);
         }
 
-        $response = [
+        return response()->json([
+            'message' => $mailSent
+                ? 'Usuario registrado. Revisa tu correo para verificar tu cuenta.'
+                : 'Usuario registrado y verificado. Ya puedes iniciar sesión.',
             'user' => $user->only('id', 'name', 'email', 'role', 'department'),
-            'requires_verification' => !$autoVerify,
-        ];
-
-        if ($autoVerify) {
-            $response['message'] = 'Usuario registrado y verificado. Ya puedes iniciar sesión.';
-        } else {
-            $response['message'] = 'Usuario registrado. Revisa tu correo para verificar tu cuenta.';
-        }
-
-        return response()->json($response, 201);
+            'requires_verification' => $mailSent,
+        ], 201);
     }
 
     /**
@@ -92,7 +83,14 @@ class AuthController extends Controller
             'email_verification_code' => null,
         ]);
 
-        return response()->json(['message' => 'Correo verificado exitosamente.']);
+        // Generar token automáticamente al verificar
+        $token = $user->createToken('Navegador Web')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Correo verificado exitosamente.',
+            'token' => $token,
+            'user' => $user->only('id', 'name', 'email', 'role', 'department'),
+        ]);
     }
 
     /**
@@ -173,7 +171,7 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
-            return response()->json(['message' => 'Si el correo existe, recibirás un código.']);
+            return response()->json(['message' => 'Si el correo existe, recibirás un código.', 'mail_sent' => false]);
         }
 
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -183,19 +181,20 @@ class AuthController extends Controller
             'password_reset_code_expires_at' => now()->addMinutes(15),
         ]);
 
-        try {
-            Mail::raw("Tu código de recuperación de contraseña es: {$code}", function ($message) use ($user) {
-                $message->to($user->email)
-                        ->subject('Código de recuperación de contraseña');
-            });
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'No se pudo enviar el correo. Código de recuperación: ' . $code,
-                'reset_code' => $code,
-            ]);
-        }
+        $mailSent = $this->sendMail(
+            $user->email,
+            'Recuperación de contraseña - Remedial',
+            $user->name,
+            'Tu código de recuperación de contraseña es:',
+            $code
+        );
 
-        return response()->json(['message' => 'Si el correo existe, recibirás un código.']);
+        return response()->json([
+            'message' => $mailSent
+                ? 'Código enviado a tu correo. Revisa tu bandeja de entrada.'
+                : 'No se pudo enviar el correo. Verifica la configuración SMTP.',
+            'mail_sent' => $mailSent,
+        ]);
     }
 
     /**
@@ -235,5 +234,33 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json($request->user()->only('id', 'name', 'email', 'role', 'department'));
+    }
+
+    /**
+     * Enviar correo HTML con código.
+     */
+    private function sendMail(string $to, string $subject, string $name, string $text, string $code): bool
+    {
+        try {
+            $html = '
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0a0a12;border:1px solid #1a1a2e;border-radius:12px;padding:32px;">
+                <h2 style="color:#00f0ff;text-align:center;margin-bottom:8px;">🏢 Remedial</h2>
+                <p style="color:#777;text-align:center;font-size:13px;margin-bottom:24px;">Sistema de gestión residencial</p>
+                <p style="color:#e0e0e8;font-size:15px;">Hola <strong>' . e($name) . '</strong>,</p>
+                <p style="color:#aaa;font-size:14px;">' . e($text) . '</p>
+                <div style="text-align:center;margin:24px 0;">
+                    <span style="display:inline-block;background:linear-gradient(135deg,#6e00ff,#00f0ff);color:#fff;font-size:28px;font-weight:700;letter-spacing:8px;padding:14px 28px;border-radius:10px;">' . e($code) . '</span>
+                </div>
+                <p style="color:#555;font-size:12px;text-align:center;">Este código expira en 15 minutos. Si no solicitaste esto, ignora este correo.</p>
+            </div>';
+
+            Mail::html($html, function ($message) use ($to, $subject) {
+                $message->to($to)->subject($subject);
+            });
+
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 }

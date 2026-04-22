@@ -243,16 +243,20 @@
 
         <!-- CHAT TAB -->
         <div id="tab-chat" class="section">
-            <div class="grid-2" style="margin-bottom:14px;">
-                <div class="form-group" style="margin:0;">
-                    <label>Chatear con departamento:</label>
-                    <select id="chatDept" onchange="loadChat()" style="margin-top:4px;">
-                        <option value="Administración">Administración</option>
-                        <option value="Torre A">Torre A</option>
-                        <option value="Torre B">Torre B</option>
-                    </select>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div class="grid-2" style="flex:1;margin:0;">
+                    <div class="form-group" style="margin:0;">
+                        <label>Chatear con departamento:</label>
+                        <select id="chatDept" onchange="loadChat()" style="margin-top:4px;">
+                            <option value="">Cargando departamentos...</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="liveIndicator" style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:#00ff88;margin-left:12px;">
+                    <span style="width:8px;height:8px;background:#00ff88;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;box-shadow:0 0 6px #00ff88;"></span> En vivo
                 </div>
             </div>
+            <style>@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }</style>
             <div class="chat-container">
                 <div class="chat-messages" id="chatMessages">
                     <div class="empty-state">Selecciona un departamento para ver los mensajes</div>
@@ -404,9 +408,16 @@ async function doVerify() {
     if (code.length < 6) { toast('Ingresa el código completo', 'error'); return; }
     const { ok, data } = await api('POST', '/auth/verify-email', { email: pendingEmail, code });
     if (!ok) { toast(data.message || 'Código inválido', 'error'); return; }
-    toast('Correo verificado. Ya puedes iniciar sesión.', 'success');
-    document.getElementById('loginEmail').value = pendingEmail;
-    showAuth('login');
+    if (data.token) {
+        token = data.token;
+        currentUser = data.user;
+        toast('Correo verificado. Bienvenido.', 'success');
+        enterApp();
+    } else {
+        toast('Correo verificado. Ya puedes iniciar sesión.', 'success');
+        document.getElementById('loginEmail').value = pendingEmail;
+        showAuth('login');
+    }
 }
 
 async function doForgot() {
@@ -414,10 +425,13 @@ async function doForgot() {
     if (!email) { toast('Ingresa tu correo', 'error'); return; }
     const { ok, data } = await api('POST', '/auth/forgot-password', { email });
     pendingEmail = email;
-    if (data.reset_code) pendingCode = data.reset_code;
-    toast('Si el correo existe, recibirás un código.', 'info');
-    document.getElementById('forgot-step1').classList.add('hidden');
-    document.getElementById('forgot-step2').classList.remove('hidden');
+    if (data.mail_sent) {
+        toast('Código enviado a tu correo. Revisa tu bandeja.', 'success');
+        document.getElementById('forgot-step1').classList.add('hidden');
+        document.getElementById('forgot-step2').classList.remove('hidden');
+    } else {
+        toast(data.message || 'No se pudo enviar el correo. Configura SMTP en .env', 'error');
+    }
 }
 
 async function doReset() {
@@ -433,6 +447,7 @@ async function doReset() {
 }
 
 async function doLogout() {
+    stopChatPolling();
     await api('POST', '/auth/logout');
     token = ''; currentUser = null;
     document.getElementById('auth-wrapper').classList.remove('hidden');
@@ -453,6 +468,7 @@ function enterApp() {
     else document.getElementById('adminTab').style.display = 'none';
     loadNotifications();
     loadSurveys();
+    loadDepartments();
 }
 
 // ========== TABS ==========
@@ -461,8 +477,9 @@ function showTab(name, btn) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
     if (btn) btn.classList.add('active');
+    stopChatPolling();
     if (name === 'notifications') loadNotifications();
-    if (name === 'chat') loadChat();
+    if (name === 'chat') { loadChat(); startChatPolling(); }
     if (name === 'surveys') loadSurveys();
 }
 
@@ -500,19 +517,40 @@ async function markAllRead() {
 }
 
 // ========== CHAT ==========
+let chatInterval = null;
+
+async function loadDepartments() {
+    const { ok, data } = await api('GET', '/departments');
+    const select = document.getElementById('chatDept');
+    if (!ok || !data.length) { select.innerHTML = '<option value="">No hay departamentos</option>'; return; }
+    select.innerHTML = data.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+}
+
+function startChatPolling() {
+    stopChatPolling();
+    chatInterval = setInterval(loadChat, 3000);
+}
+
+function stopChatPolling() {
+    if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
+}
+
 async function loadChat() {
     const dept = document.getElementById('chatDept').value;
+    if (!dept) return;
     const { ok, data } = await api('GET', '/chat?department=' + encodeURIComponent(dept));
     const container = document.getElementById('chatMessages');
     const items = data.data || [];
-    if (!items.length) { container.innerHTML = '<div class="empty-state">No hay mensajes con ' + dept + '</div>'; return; }
+    const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    if (!items.length) { container.innerHTML = '<div class="empty-state">No hay mensajes con ' + dept + '. Envía el primero.</div>'; return; }
     container.innerHTML = items.map(m => `
         <div class="chat-bubble ${m.user_id === currentUser.id ? 'mine' : 'other'}">
             ${m.user_id !== currentUser.id ? '<div class="chat-sender">' + (m.user ? m.user.name : 'Usuario') + '</div>' : ''}
             ${m.message}
+            <div style="font-size:0.65rem;opacity:0.5;margin-top:4px;text-align:right;">${new Date(m.created_at).toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit'})}</div>
         </div>
     `).join('');
-    container.scrollTop = container.scrollHeight;
+    if (wasAtBottom) container.scrollTop = container.scrollHeight;
 }
 
 async function sendChat() {

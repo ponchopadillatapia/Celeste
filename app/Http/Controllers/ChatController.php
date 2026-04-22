@@ -9,6 +9,19 @@ use Illuminate\Http\Request;
 class ChatController extends Controller
 {
     /**
+     * Obtener lista de departamentos (excluyendo el del usuario actual).
+     */
+    public function departments(Request $request)
+    {
+        $departments = \App\Models\User::whereNotNull('department')
+            ->where('department', '!=', $request->user()->department)
+            ->distinct()
+            ->pluck('department');
+
+        return response()->json($departments);
+    }
+
+    /**
      * Obtener mensajes entre dos departamentos.
      */
     public function index(Request $request)
@@ -52,8 +65,12 @@ class ChatController extends Controller
 
         $chatMessage->load('user:id,name,department');
 
-        // Emitir por WebSocket
-        broadcast(new NewChatMessage($chatMessage))->toOthers();
+        // Emitir por WebSocket (si está disponible)
+        try {
+            broadcast(new NewChatMessage($chatMessage))->toOthers();
+        } catch (\Exception $e) {
+            // WebSocket no disponible, continuar sin broadcast
+        }
 
         return response()->json($chatMessage, 201);
     }

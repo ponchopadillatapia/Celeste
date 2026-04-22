@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum', 'session.active'])->group(function () {
     // Chat entre departamentos (WebSocket)
     Route::get('/chat', [ChatController::class, 'index']);
     Route::post('/chat', [ChatController::class, 'store']);
+    Route::get('/departments', [ChatController::class, 'departments']);
 
     // Encuestas en vivo (WebSocket)
     Route::get('/surveys', [SurveyController::class, 'index']);

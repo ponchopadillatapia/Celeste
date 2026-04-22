@@ -103,7 +103,11 @@ class SurveyController extends Controller
         ]);
 
         // Emitir resultados actualizados por WebSocket
-        broadcast(new SurveyVoted($survey));
+        try {
+            broadcast(new SurveyVoted($survey));
+        } catch (\Exception $e) {
+            // WebSocket no disponible
+        }
 
         return response()->json(['message' => 'Voto registrado.']);
     }

@@ -19,8 +19,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => CheckRole::class,
             'session.active' => EnsureSessionActive::class,
         ]);
-
-        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
