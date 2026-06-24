@@ -37,7 +37,7 @@ class AuthController extends Controller
         // Intentar enviar correo de verificación
         $mailSent = $this->sendMail(
             $user->email,
-            'Código de verificación - Remedial',
+            'Código de verificación - CHAT SUPER-PONCHO',
             $user->name,
             'Tu código de verificación es:',
             $code
@@ -183,7 +183,7 @@ class AuthController extends Controller
 
         $mailSent = $this->sendMail(
             $user->email,
-            'Recuperación de contraseña - Remedial',
+            'Recuperación de contraseña - CHAT SUPER-PONCHO',
             $user->name,
             'Tu código de recuperación de contraseña es:',
             $code
@@ -244,7 +244,7 @@ class AuthController extends Controller
         try {
             $html = '
             <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0a0a12;border:1px solid #1a1a2e;border-radius:12px;padding:32px;">
-                <h2 style="color:#00f0ff;text-align:center;margin-bottom:8px;">🏢 Remedial</h2>
+                <h2 style="color:#00f0ff;text-align:center;margin-bottom:8px;">🏢 CHAT SUPER-PONCHO</h2>
                 <p style="color:#777;text-align:center;font-size:13px;margin-bottom:24px;">Sistema de gestión residencial</p>
                 <p style="color:#e0e0e8;font-size:15px;">Hola <strong>' . e($name) . '</strong>,</p>
                 <p style="color:#aaa;font-size:14px;">' . e($text) . '</p>

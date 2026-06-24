@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
         // Admin
         $admin = User::create([
             'name' => 'Admin Principal',
-            'email' => 'admin@remedial.com',
+            'email' => 'admin@superponcho.com',
             'password' => 'password123',
             'role' => 'admin',
             'department' => 'Administración',
@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
         // Residentes
         $residente1 = User::create([
             'name' => 'Juan Pérez',
-            'email' => 'juan@remedial.com',
+            'email' => 'juan@superponcho.com',
             'password' => 'password123',
             'role' => 'residente',
             'department' => 'Torre A',
@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
 
         $residente2 = User::create([
             'name' => 'María López',
-            'email' => 'maria@remedial.com',
+            'email' => 'maria@superponcho.com',
             'password' => 'password123',
             'role' => 'residente',
             'department' => 'Torre B',
@@ -59,7 +59,7 @@ class DatabaseSeeder extends Seeder
             'user_id' => $residente2->id,
             'type' => 'mensaje',
             'title' => 'Bienvenida',
-            'body' => 'Bienvenida a la plataforma Remedial.',
+            'body' => 'Bienvenida a la plataforma CHAT SUPER-PONCHO.',
         ]);
 
         // Encuesta de ejemplo

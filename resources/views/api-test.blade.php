@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remedial</title>
+    <title>CHAT SUPER-PONCHO</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #050508; color: #e0e0e8; min-height: 100vh; }
@@ -105,7 +105,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>🏢 Remedial</h1>
+    <h1>🏢 CHAT SUPER-PONCHO</h1>
     <p class="subtitle">Sistema de gestión residencial</p>
 
     <!-- ========== AUTH SCREENS ========== -->
@@ -116,7 +116,7 @@
                 <h2>👋 Bienvenido</h2>
                 <div class="form-group">
                     <label>Correo electrónico</label>
-                    <input type="email" id="loginEmail" value="admin@remedial.com" placeholder="tu@correo.com">
+                    <input type="email" id="loginEmail" value="admin@superponcho.com" placeholder="tu@correo.com">
                 </div>
                 <div class="form-group">
                     <label>Contraseña</label>
